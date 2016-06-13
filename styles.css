@@ -1,0 +1,11 @@
+.status-500 {
+	background: red;
+	color: white;
+	font-weight: bold;
+}
+
+.status-200 {
+	background: green;
+	color: white;
+	font-weight: bold;
+}

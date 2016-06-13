@@ -1,0 +1,93 @@
+<html>
+	<head>
+		
+		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+		<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+
+		<link rel="stylesheet" type="text/css" href="node_modules/bootstrap/dist/css/bootstrap.css">
+		<link rel="stylesheet" type="text/css" href="styles.css">
+		<script>
+
+		function sync_data(onLoad) {
+			$.ajax({
+				url: "data.php",
+				type: "get",
+				success: function (r) {
+					var data = $.parseJSON(r);
+					
+					if(onLoad) onLoad(data);
+
+				}, error: function () {
+
+				}
+
+			});
+		}
+
+		function renderData(data) {
+
+			var requests = data['time_by_request'];
+			var counts = data['count_by_request'];
+			var statuses = data['status_by_request'];
+			var time_sum = data['request_time_sum'];
+			var local_time_delta = data['local_time_delta'];
+			var num_requests = data['log_lines'];
+			
+			$('#requests').children().remove();
+
+			$('.time-delta').html(local_time_delta);
+			$('.num-requests').html(num_requests);
+			
+			var toSort = [];
+			for (var request in requests) {
+				var time = requests[request];
+				toSort.push({"name": request, "pct": time/time_sum, "status": parseInt(statuses[request])});
+			}
+
+			toSort.sort(function(a, b) {
+				if (b.status == 500 && a.status != 500) {
+					return 1;
+				} else if (a.status == 500 && b.status != 500) {
+					return -1;
+				}
+
+				return b.pct - a.pct;
+			});
+
+			$(toSort).each(function (index, item) {
+				var request = item.name;
+				var time = requests[request];
+				var newElement = $('<li class="list-group-item request status-'+statuses[request]+'"><span class="badge"><span class="count"></span>'+((time/time_sum)*100).toPrecision(4)+'%</span><span class="name">Cras justo odio</span></li>');
+				newElement.find('.name').html(request);
+				newElement.find('.count').html("(" + parseInt(counts[request]) + ") ");
+				$('#requests').append(newElement);
+			});
+		}
+
+		$(function () {
+			
+			var onLoad = function (data) {
+
+				renderData(data);
+
+				setTimeout(function() {
+					sync_data(onLoad);
+				}, 1000);
+			}
+
+			sync_data(onLoad);
+		});
+		
+		</script>
+	</head>
+	<body>
+		<div class='container'>
+			<br/>
+			<div class="well">Time Delta: <span class="time-delta"></span> | Requests: <span class="num-requests"></span></div>
+			<ul class="list-group" id="requests">
+			  
+			</ul>
+		</div>
+	</body>
+
+</html>
