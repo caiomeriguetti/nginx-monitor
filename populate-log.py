@@ -3,7 +3,7 @@ import random
 from multiprocessing import Process
 import time
 
-url="http://localhost:8989/index.php"
+url="http://localhost:80/index.php"
 
 def request(i, url):
 	

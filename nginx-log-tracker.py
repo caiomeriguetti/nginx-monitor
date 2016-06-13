@@ -7,7 +7,7 @@ import datetime
 import time
 
                   # String to find
-fname = "/var/log/nginx/teste.log"     # File to check
+fname = "/var/log/nginx/allapps.log"     # File to check
 
 def tail(f, lines=20 ):
     total_lines_wanted = lines
