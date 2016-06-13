@@ -8,14 +8,74 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<script>
 
+
+		function processReport(lines) {
+
+			var data_by_request = {};
+
+			var sum_time = 0.0
+			var log_lines = lines.length;
+			var min_time = null;
+			var max_time = null;
+
+			for (var i = 0; i < lines.length; i++) {
+				var line = lines[i];
+
+				try {
+					var linedata = $.parseJSON(line);
+				} catch (e) {
+					continue
+				}
+
+				var duration = parseFloat(linedata["duration"]);
+				var time = linedata["time_local"];
+
+				// time = datetime.datetime.strptime(linedata["time_local"].split(" ")[0], "%d/%b/%Y:%H:%M:%S")
+
+				// if min_time == None:
+				// 	min_time = time
+				// elif time < min_time:
+				// 	min_time = time
+
+				// if max_time == None:
+				// 	max_time = time
+				// elif time > max_time:
+				// 	max_time = time
+
+				sum_time = sum_time + duration
+				request_index = linedata["host"] + " - " + linedata["status"] + " - " + linedata["request"]
+				
+
+				if (!data_by_request[request_index]) {
+					data_by_request[request_index] = {'status': '', 'host': '', 'duration': 0, 'count': 0};
+				}
+
+				
+				data_by_request[request_index]["duration"] = data_by_request[request_index]["duration"] + duration
+				data_by_request[request_index]["count"] = data_by_request[request_index]["count"] + 1
+				data_by_request[request_index]["status"] = linedata["status"]
+				data_by_request[request_index]["host"] = linedata["host"]
+			}
+
+			return {'data_by_request': data_by_request, 'request_time_sum': sum_time, 'log_lines': log_lines};
+		}
+
+
 		function sync_data(onLoad) {
+			try {
+				numLines = localStorage.getItem("numLines");
+			} catch (e) {
+				numLines = 5000;
+			}
+
 			$.ajax({
-				url: "data.php",
+				url: "data.php?numLines="+numLines,
 				type: "get",
 				success: function (r) {
-					var data = $.parseJSON(r);
+					var lines = r.split("\n");
+					var processedData = processReport(lines)
 					
-					if(onLoad) onLoad(data);
+					if(onLoad) onLoad(processedData);
 
 				}, error: function () {
 
@@ -26,23 +86,23 @@
 
 		function renderData(data) {
 
-			var requests = data['time_by_request'];
-			var counts = data['count_by_request'];
-			var statuses = data['status_by_request'];
+			var requests = data['data_by_request'];
 			var time_sum = data['request_time_sum'];
 			var local_time_delta = data['local_time_delta'];
 			var num_requests = data['log_lines'];
 			
-			$('#requests').children().remove();
-
 			$('.time-delta').html(local_time_delta);
-			$('.num-requests').html(num_requests);
+			$('.requests-number').html(num_requests);
 			
 			var toSort = [];
+			var total = 0;
 			for (var request in requests) {
-				var time = requests[request];
-				toSort.push({"name": request, "pct": time/time_sum, "status": parseInt(statuses[request])});
+				total += parseInt(data["count"]);
+				var data = requests[request];
+				toSort.push({"name": request, "pct": data.duration/time_sum, "status": parseInt(data["status"])});
 			}
+
+			$("#requests-number").val(total);
 
 			toSort.sort(function(a, b) {
 				if (b.status == 500 && a.status != 500) {
@@ -53,13 +113,15 @@
 
 				return b.pct - a.pct;
 			});
+			
+			$('#requests').children().remove();
 
 			$(toSort).each(function (index, item) {
 				var request = item.name;
-				var time = requests[request];
-				var newElement = $('<li class="list-group-item request status-'+statuses[request]+'"><span class="badge"><span class="count"></span>'+((time/time_sum)*100).toPrecision(4)+'%</span><span class="name">Cras justo odio</span></li>');
+				var time = requests[request]["duration"];
+				var newElement = $('<li class="list-group-item request status-'+requests[request]["status"]+'"><span class="badge"><span class="count"></span>'+((time/time_sum)*100).toPrecision(4)+'%</span><span class="name">Cras justo odio</span></li>');
 				newElement.find('.name').html(request);
-				newElement.find('.count').html("(" + parseInt(counts[request]) + ") ");
+				newElement.find('.count').html("(" + parseInt(requests[request]["count"]) + ") ");
 				$('#requests').append(newElement);
 			});
 		}
@@ -67,13 +129,23 @@
 		$(function () {
 			
 			var onLoad = function (data) {
-
 				renderData(data);
 
 				setTimeout(function() {
 					sync_data(onLoad);
-				}, 1000);
+				}, 3000);
 			}
+
+			try {
+				numLines = localStorage.getItem("numLines");
+			} catch (e) {
+				numLines = 5000;
+			}
+			
+			$("#numLines").val(numLines);
+			$("#numLines").change(function () {
+				localStorage.setItem('numLines', $(this).val());
+			});
 
 			sync_data(onLoad);
 		});
@@ -83,7 +155,7 @@
 	<body>
 		<div class='container'>
 			<br/>
-			<div class="well">Time Delta: <span class="time-delta"></span> | Requests: <span class="num-requests"></span></div>
+			<div class="well">Requests Number: <span class="requests-number"></span> | Time Delta: <span class="time-delta"></span> | Requests: <input type="text" value="" id="numLines"></input></div>
 			<ul class="list-group" id="requests">
 			  
 			</ul>
