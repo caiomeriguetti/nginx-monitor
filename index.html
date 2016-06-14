@@ -122,7 +122,43 @@
 				var newElement = $('<li class="list-group-item request status-'+requests[request]["status"]+'"><span class="badge"><span class="count"></span>'+((time/time_sum)*100).toPrecision(4)+'%</span><span class="name">Cras justo odio</span></li>');
 				newElement.find('.name').html(request);
 				newElement.find('.count').html("(" + parseInt(requests[request]["count"]) + ") ");
+				newElement.data("request", requests[request]);
 				$('#requests').append(newElement);
+			});
+
+			var kw = $('#search-input').val();
+			filter(kw);
+		}
+
+		function filter(kw) {
+			var values = kw.split(' ');
+
+			$('#requests').children().removeClass("hide");
+				
+			if (kw == "") {
+				return;
+			}
+
+			$('#requests').children().each(function (index, item) {
+				var itemText = $(item).text().toLowerCase();
+				var isVisible = true;
+				for (var i=0; i < values.length; i++) {
+					if (values[i] === "") {
+						continue;
+					}
+
+					var lcValue = values[i].toLowerCase();
+
+					if(itemText.indexOf(lcValue) < 0) {
+						isVisible = false;
+					}
+				}
+
+				if(isVisible) {
+					$(item).removeClass('hide');
+				} else {
+					$(item).addClass('hide');
+				}
 			});
 		}
 
@@ -147,6 +183,11 @@
 				localStorage.setItem('numLines', $(this).val());
 			});
 
+			$("#search-input").on("keyup", function() {
+				var kw = $(this).val();
+				filter(kw);
+			});
+
 			sync_data(onLoad);
 		});
 		
@@ -154,8 +195,19 @@
 	</head>
 	<body>
 		<div class='container'>
-			<br/>
-			<div class="well">Requests Number: <span class="requests-number"></span> | Time Delta: <span class="time-delta"></span> | Requests: <input type="text" value="" id="numLines"></input></div>
+
+			<div class="row">
+				<div class="col-md-12">
+					<div class="well">Requests Number: <span class="requests-number"></span> | Time Delta: <span class="time-delta"></span> | Requests: <input type="text" value="" id="numLines"></input></div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-12">
+					<div class="input-group" style="width: 100%">
+					  <input type="text" placeholder="search" id="search-input" class="form-control" aria-label="Amount (to the nearest dollar)">
+					</div>
+				</div>
+			</div>
 			<ul class="list-group" id="requests">
 			  
 			</ul>
