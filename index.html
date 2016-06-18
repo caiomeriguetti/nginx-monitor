@@ -8,11 +8,12 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<script>
 
+		var views_by_request = {};
+		var data_by_request;
 
 		function processReport(lines) {
 
-			var data_by_request = {};
-
+			data_by_request = {};
 			var sum_time = 0.0
 			var log_lines = lines.length;
 			var min_time = null;
@@ -26,6 +27,8 @@
 				} catch (e) {
 					continue
 				}
+
+				var request_index = linedata["host"] + " - " + linedata["status"] + " - " + linedata["request"];
 
 				var duration = parseFloat(linedata["duration"]);
 				var time = linedata["time_local"];
@@ -43,8 +46,6 @@
 				// 	max_time = time
 
 				sum_time = sum_time + duration
-				request_index = linedata["host"] + " - " + linedata["status"] + " - " + linedata["request"]
-				
 
 				if (!data_by_request[request_index]) {
 					data_by_request[request_index] = {'status': '', 'host': '', 'duration': 0, 'count': 0};
@@ -86,6 +87,8 @@
 
 		function renderData(data) {
 
+			$("#requests").children().addClass('to-remove');
+
 			var requests = data['data_by_request'];
 			var time_sum = data['request_time_sum'];
 			var local_time_delta = data['local_time_delta'];
@@ -95,14 +98,19 @@
 			$('.requests-number').html(num_requests);
 			
 			var toSort = [];
-			var total = 0;
 			for (var request in requests) {
-				total += parseInt(data["count"]);
 				var data = requests[request];
-				toSort.push({"name": request, "pct": data.duration/time_sum, "status": parseInt(data["status"])});
-			}
+				var view = views_by_request[request];
+				if (view) {
+					updateItem(view, request, data, time_sum);
+				} else {
+					view = createItem(request, data, time_sum);
+				}
+				
+				view.removeClass('to-remove');
 
-			$("#requests-number").val(total);
+				toSort.push({"view": view, "pct": data.duration/time_sum, "status": parseInt(data["status"])});
+			}
 
 			toSort.sort(function(a, b) {
 				if (b.status == 500 && a.status != 500) {
@@ -113,21 +121,38 @@
 
 				return b.pct - a.pct;
 			});
-			
-			$('#requests').children().remove();
 
 			$(toSort).each(function (index, item) {
-				var request = item.name;
-				var time = requests[request]["duration"];
-				var newElement = $('<li class="list-group-item request status-'+requests[request]["status"]+'"><span class="badge"><span class="count"></span>'+((time/time_sum)*100).toPrecision(4)+'%</span><span class="name">Cras justo odio</span></li>');
-				newElement.find('.name').html(request);
-				newElement.find('.count').html("(" + parseInt(requests[request]["count"]) + ") ");
-				newElement.data("request", requests[request]);
-				$('#requests').append(newElement);
+				$('#requests').append(item.view);
 			});
+
+			$("#requests .to-remove").remove();
 
 			var kw = $('#search-input').val();
 			filter(kw);
+		}
+
+		function setItemData(element, requestName, requestData, time_sum) {
+			var time = requestData["duration"];
+			var status = 'status-'+requestData["status"];
+			element.addClass(status);
+			element.find('.pct').html(((time/time_sum)*100).toPrecision(4) + "%");
+			element.find('.name').html(requestName);
+			element.find('.count').html("(" + parseInt(requestData["count"]) + ") ");
+			element.data("request", requestData);
+		}
+
+		function createItem(requestName, requestData, time_sum) {
+			var element = $('<li class="list-group-item request"><span class="badge"><span class="count"></span><span class="pct"></span></span><span class="name">Cras justo odio</span></li>');
+			setItemData(element, requestName, requestData, time_sum);
+			$('#requests').append(element);
+			views_by_request[requestName] = element;
+
+			return element;
+		}
+
+		function updateItem(element, requestName, requestData, time_sum) {
+			setItemData(element, requestName, requestData, time_sum);
 		}
 
 		function filter(kw) {
