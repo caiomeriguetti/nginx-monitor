@@ -13,3 +13,10 @@
 .hide {
 	display: none;
 }
+
+.avg-time{
+	opacity: .5;
+    color: #333;
+    font-weight: normal;
+    font-size: 10px;
+}

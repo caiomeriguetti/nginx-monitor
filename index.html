@@ -138,12 +138,14 @@
 			element.addClass(status);
 			element.find('.pct').html(((time/time_sum)*100).toPrecision(4) + "%");
 			element.find('.name').html(requestName);
+			element.find('.avg-time').html((time/requestData["count"]).toPrecision(2)*1000 + "ms");
 			element.find('.count').html("(" + parseInt(requestData["count"]) + ") ");
 			element.data("request", requestData);
+
 		}
 
 		function createItem(requestName, requestData, time_sum) {
-			var element = $('<li class="list-group-item request"><span class="badge"><span class="count"></span><span class="pct"></span></span><span class="name">Cras justo odio</span></li>');
+			var element = $('<li class="list-group-item request"><span class="badge"><span class="count"></span><span class="pct"></span></span><span class="name">Cras justo odio</span> <span class="avg-time"></span></li>');
 			setItemData(element, requestName, requestData, time_sum);
 			$('#requests').append(element);
 			views_by_request[requestName] = element;
